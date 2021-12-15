@@ -1,5 +1,10 @@
 **Token**: Token-based Representation for Image Retrieval
 ========
+🆕✅🎉 _updated: 15th December 2022: We extend the proposed aggregation method to a variety of existing local features._
+
+
+
+
 PyTorch training code for **Token**-based Representation for Image Retrieval.
 We propose a joint local feature learning and aggregation framework, obtaining **82.3 mAP** on ROxf with Medium evaluation protocols. Inference in 50 lines of PyTorch.
 
