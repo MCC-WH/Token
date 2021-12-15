@@ -1,9 +1,20 @@
 **Token**: Token-based Representation for Image Retrieval
 ========
 🆕✅🎉 _updated: 15th December 2022: We extend the proposed aggregation method to a variety of existing local features._
+
 The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
 ![Aggregator](Figure/aggregator.png)
 
+The table below shows the performance comparison between ASMK aggregation and our proposed aggregation method. The ASMK aggregator requires offline clustering to generate large codebooks, and our aggregator requires supervised training, where we utilize the GLDv2 dataset for training.
+
+  | Model | ROxf (M) | RPar (M) | ROxf (H) | RPar (H) |
+  |:------|:------:|:------:|:------:|:------:|
+  | R50-HOW + ASMK  | 79.4 | 81.6 | 56.9 | 62.4 |
+  | **R50-HOW+Ours**    | **80.7** | **86.5** | **60.9** | **72.0** |
+  | R101-HOW + ASMK | 80.4 | 85.4 | 62.5 | 70.8 |
+  | **R101-HOW + Ours** | **83.2** | **87.7** | **64.8** | **75.3** |
+  | R50-DELF + ASMK | 67.8 | 76.9 | 43.1 | 55.4 |
+  | **R50-DELF + Ours** | **75.2** | **86.0** | **55.0** | **72.2** |
 
 PyTorch training code for **Token**-based Representation for Image Retrieval.
 We propose a joint local feature learning and aggregation framework, obtaining **82.3 mAP** on ROxf with Medium evaluation protocols. Inference in 50 lines of PyTorch.
