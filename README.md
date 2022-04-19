@@ -1,4 +1,4 @@
-**Token**: Token-based Representation for Image Retrieval
+**Token**: Token-Based Representation for Image Retrieval
 ========
 🆕✅🎉 _updated: 15th December 2022: We extend the proposed aggregation method to a variety of existing local features._
 
