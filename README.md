@@ -1,6 +1,6 @@
 **Token**: Token-Based Representation for Image Retrieval
 ========
-🆕✅🎉 _updated: 15th December 2022: We extend the proposed aggregation method to a variety of existing local features._
+🆕✅🎉 _updated: 15th December 2021: We extend the proposed aggregation method to a variety of existing local features._
 
 The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
 ![Aggregator](Figure/aggregator.png)
