@@ -163,8 +163,8 @@ class Decoder(nn.Module):
 class Token_Refine(nn.Module):
     def __init__(self, num_heads, num_object, mid_dim=1024, encoder_layer=1, decoder_layer=2, qkv_bias=True, drop=0.1, attn_drop=0.1, drop_path=0.1):
         super().__init__()
-        self.tokens = nn.Conv2d(in_channels=mid_dim, out_channels=num_object, kernel_size=1, stride=1, padding=0)
-        self.token_norm = nn.LayerNorm(mid_dim)
+        self.query = Parameter(torch.randn(1, num_object, mid_dim))
+        self.token_norm = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.LayerNorm(mid_dim))
         self.encoder = nn.ModuleList([Encoder(mid_dim, num_heads, qkv_bias, drop, attn_drop, drop_path) for _ in range(encoder_layer)])
         self.decoder = nn.ModuleList([Decoder(mid_dim, num_heads, qkv_bias, drop, attn_drop, drop_path) for _ in range(decoder_layer)])
         self.conv = nn.Sequential(nn.Conv2d(in_channels=2048, out_channels=mid_dim, kernel_size=(1, 1), stride=1, padding=0), nn.BatchNorm2d(mid_dim))
@@ -176,14 +176,14 @@ class Token_Refine(nn.Module):
         x = self.conv(x).reshape(B, self.mid_dim, H * W).permute(0, 2, 1)
         for encoder in self.encoder:
             x = encoder(x)
-        x = x.permute(0, 2, 1).reshape(B, self.mid_dim, H, W)
-        attns = F.softmax(self.tokens(x), dim=1)
-        q = self.token_norm(torch.mean(attns.unsqueeze(2) * x.unsqueeze(1), dim=(-2, -1)))
-        x = x.reshape(B, self.mid_dim, H * W).permute(0, 2, 1)
+        q = self.query.repeat(B, 1, 1)  # B x num_object x mid_dim
+        attns = F.softmax(torch.bmm(q, x.permute(0, 2, 1)), dim=1)  # b x num_object x (H x W)
+        token = torch.bmm(attns, x)
+        token = self.token_norm(token)
         for decoder in self.decoder:
-            q = decoder(q, x)
-        q = self.proj(q.reshape(B, -1))
-        return q
+            token = decoder(token, x)
+        token = self.proj(token.reshape(B, -1))
+        return token
 
 
 class ArcFace(nn.Module):
@@ -221,19 +221,9 @@ class RetrievalNet(nn.Module):
         self.outputdim = 1024
         self.backbone = ResNet(name='resnet101', train_backbone=True, dilation_block5=False)
         self.tr = Token_Refine(num_heads=8, num_object=4, mid_dim=outputdim, encoder_layer=1, decoder_layer=2)
-        self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
 
-    @autocast()
-    def forward_test(self, x):
+    def forward(self, x):
         x = self.backbone(x)
         x = self.tr(x)
         global_feature = F.normalize(x, dim=-1)
         return global_feature
-
-    @autocast()
-    def forward(self, x: Tensor, label):
-        x = self.backbone(x)
-        global_feature = self.tr(x)
-        global_logits = self.classifier(global_feature, label)
-        global_loss = F.cross_entropy(global_logits, label)
-        return global_loss, global_logits
