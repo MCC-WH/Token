@@ -1,6 +1,7 @@
 **Token**: Token-Based Representation for Image Retrieval
 ========
-🆕✅🎉 _updated: 21th April 2022: We release different pre-trained models._
+🆕✅🎉 _updated: 21th April 2022: We release different model weights._
+🆕✅🎉 _updated: 15th December 2021: We extend the proposed aggregation method to a variety of existing local features._
 
 # mAP performance of the proposed model
 We provide results of **Token**.
@@ -17,10 +18,8 @@ mAP is computed with Medium and Hard evaluation protocols.
 | [R50-Token](https://drive.google.com/file/d/111CQpn38d2P82VhbawMrM5wGNMU9AlFq/view?usp=sharing) | 79.79 | - | 88.08 | - | 62.68 | - | 75.49 | - |
 | [R101-Token](https://drive.google.com/file/d/1g_fvpaSyYn9QmzyVnoY7cDlUL7EZWbZz/view?usp=sharing) | **82.61** | **70.58** | **89.40** | **77.24** | **65.75** | **47.46** | **78.44** | **56.81** |
 
-
-🆕✅🎉 _updated: 15th December 2021: We extend the proposed aggregation method to a variety of existing local features._
-
-# The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
+# Local feature aggregation framework
+The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
 ![Aggregator](Figure/aggregator.png)
 
 The table below shows the performance comparison between ASMK aggregation and our proposed aggregation method. The ASMK aggregator requires offline clustering to generate large codebooks, and our aggregator requires supervised training, where we utilize the GLDv2 dataset for training.
