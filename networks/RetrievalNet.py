@@ -221,9 +221,17 @@ class RetrievalNet(nn.Module):
         self.outputdim = 1024
         self.backbone = ResNet(name='resnet101', train_backbone=True, dilation_block5=False)
         self.tr = Token_Refine(num_heads=8, num_object=4, mid_dim=outputdim, encoder_layer=1, decoder_layer=2)
+        self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
 
-    def forward(self, x):
+    def forward_test(self, x):
         x = self.backbone(x)
         x = self.tr(x)
         global_feature = F.normalize(x, dim=-1)
         return global_feature
+
+    def forward(self, x, label):
+        x = self.backbone(x)
+        x = self.tr(x)
+        global_logits = self.classifier(x, label)
+        global_loss = F.cross_entropy(global_logits, label)
+        return global_loss, global_logits
