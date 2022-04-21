@@ -1,5 +1,23 @@
 **Token**: Token-Based Representation for Image Retrieval
 ========
+🆕✅🎉 _updated: 21th April 2022: We release different pre-trained models._
+
+# mAP performance of the proposed model
+We provide results of **Token**.
+mAP is computed with Medium and Hard evaluation protocols.
+
+| Model | ROxf (M) | ROxf + R1M (M) | RPar (M) | RPar + R1M (M) |  ROxf (H) | ROxf + R1M (H) | RPar (H) | RPar + R1M (H) |
+|:------|:------:|:------:|:------:|:------:|:------:|:------:|:------:|:------:|
+| [R101-HOW + VLAD](https://drive.google.com/file/d/101DDy9aEeOK22xfL4xm2HTaeVBBSSr1k/view?usp=sharing)  | 73.54 | 60.38 | 82.33 | 62.56 | 51.93 | 33.17 | 66.95 | 41.82 |
+| [R101-HOW + ASMK](https://drive.google.com/file/d/101DDy9aEeOK22xfL4xm2HTaeVBBSSr1k/view?usp=sharing)  | 80.42 | 70.17 | 85.43 | 68.80 | 62.51 | 45.36 | 70.76 | 45.39 |
+| [R01-NetVLAD](https://drive.google.com/file/d/1zESoQbza0c9hqasK8rGJCWoONMV43ekQ/view?usp=sharing)    | 73.91 | 60.51 | 86.81 | 71.31 | 56.45 | 37.92 | 73.61 | 48.98 |
+| [R101-RMAC](https://drive.google.com/file/d/12um3mZU2kVNto3MPrZ6FmxFca_tL3Sgi/view?usp=sharing) |75.14 | 61.88 | 85.28 | 67.37 | 53.77 | 36.45 | 71.28 | 44.01 |
+| [R101-SOLAR](https://drive.google.com/file/d/1CJNEeE0NDlsl56jnmsZFmPfH-jx32Syh/view?usp=sharing) | 79.65 | 67.61 | 88.63 | 73.21 | 59.99 | 41.14 | 76.15 | 50.98 |
+| [R101-DELG](https://drive.google.com/file/d/10WExWiY5cc4-hrQQpQ3yUvOV06f3wYaB/view?usp=sharing) | 78.55 | 66.02 | 88.58 | 73.65 | 60.89 | 41.75 | 76.05 | 51.46 |
+| [R50-Token](https://drive.google.com/file/d/111CQpn38d2P82VhbawMrM5wGNMU9AlFq/view?usp=sharing) | 79.79 | - | 88.08 | - | 62.68 | - | 75.49 | - |
+| [R101-Token](https://drive.google.com/file/d/1g_fvpaSyYn9QmzyVnoY7cDlUL7EZWbZz/view?usp=sharing) | **82.61** | **70.58** | **89.40** | **77.24** | **65.75** | **47.46** | **78.44** | **56.81** |
+
+
 🆕✅🎉 _updated: 15th December 2021: We extend the proposed aggregation method to a variety of existing local features._
 
 The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
@@ -30,13 +48,6 @@ visual tokens to form a compact global representation $f_g$ and reduce its dimen
 Training code follows this idea - it is not a library,
 but simply a [train.py](train.py) importing model and criterion
 definitions with standard training loops.
-
-# mAP performance of the proposed model
-We provide results of **Token**.
-mAP is computed with Medium and Hard evaluation protocols.
-model will come soon.
-
-![Token](Figure/result.png)
 
 # Requirements
 - Python 3
