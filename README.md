@@ -20,7 +20,7 @@ mAP is computed with Medium and Hard evaluation protocols.
 
 🆕✅🎉 _updated: 15th December 2021: We extend the proposed aggregation method to a variety of existing local features._
 
-The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
+# The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
 ![Aggregator](Figure/aggregator.png)
 
 The table below shows the performance comparison between ASMK aggregation and our proposed aggregation method. The ASMK aggregator requires offline clustering to generate large codebooks, and our aggregator requires supervised training, where we utilize the GLDv2 dataset for training.
