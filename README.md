@@ -1,6 +1,7 @@
 **Token**: Token-Based Representation for Image Retrieval
 ========
 🆕✅🎉 _updated: 21th April 2022: We release different model weights._
+
 🆕✅🎉 _updated: 15th December 2021: We extend the proposed aggregation method to a variety of existing local features._
 
 # mAP performance of the proposed model
