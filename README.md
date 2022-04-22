@@ -16,7 +16,7 @@ mAP is computed with Medium and Hard evaluation protocols.
 | [R101-RMAC](https://drive.google.com/file/d/12um3mZU2kVNto3MPrZ6FmxFca_tL3Sgi/view?usp=sharing) |75.14 | 61.88 | 85.28 | 67.37 | 53.77 | 36.45 | 71.28 | 44.01 |
 | [R101-SOLAR](https://drive.google.com/file/d/1CJNEeE0NDlsl56jnmsZFmPfH-jx32Syh/view?usp=sharing) | 79.65 | 67.61 | 88.63 | 73.21 | 59.99 | 41.14 | 76.15 | 50.98 |
 | [R101-DELG](https://drive.google.com/file/d/10WExWiY5cc4-hrQQpQ3yUvOV06f3wYaB/view?usp=sharing) | 78.55 | 66.02 | 88.58 | 73.65 | 60.89 | 41.75 | 76.05 | 51.46 |
-| [R50-Token](https://drive.google.com/file/d/111CQpn38d2P82VhbawMrM5wGNMU9AlFq/view?usp=sharing) | 79.79 | - | 88.08 | - | 62.68 | - | 75.49 | - |
+| [R50-Token](https://drive.google.com/file/d/111CQpn38d2P82VhbawMrM5wGNMU9AlFq/view?usp=sharing) | 79.79 | 67.36 | 88.08 | 74.33 | 62.68 | 45.70 | 75.49 | 52.68 |
 | [R101-Token](https://drive.google.com/file/d/1g_fvpaSyYn9QmzyVnoY7cDlUL7EZWbZz/view?usp=sharing) | **82.61** | **70.58** | **89.40** | **77.24** | **65.75** | **47.46** | **78.44** | **56.81** |
 
 # Local feature aggregation framework
