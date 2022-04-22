@@ -12,7 +12,7 @@ mAP is computed with Medium and Hard evaluation protocols.
 |:------|:------:|:------:|:------:|:------:|:------:|:------:|:------:|:------:|
 | [R101-HOW + VLAD](https://drive.google.com/file/d/101DDy9aEeOK22xfL4xm2HTaeVBBSSr1k/view?usp=sharing)  | 73.54 | 60.38 | 82.33 | 62.56 | 51.93 | 33.17 | 66.95 | 41.82 |
 | [R101-HOW + ASMK](https://drive.google.com/file/d/101DDy9aEeOK22xfL4xm2HTaeVBBSSr1k/view?usp=sharing)  | 80.42 | 70.17 | 85.43 | 68.80 | 62.51 | 45.36 | 70.76 | 45.39 |
-| [R01-NetVLAD](https://drive.google.com/file/d/1zESoQbza0c9hqasK8rGJCWoONMV43ekQ/view?usp=sharing)    | 73.91 | 60.51 | 86.81 | 71.31 | 56.45 | 37.92 | 73.61 | 48.98 |
+| [R101-NetVLAD](https://drive.google.com/file/d/1zESoQbza0c9hqasK8rGJCWoONMV43ekQ/view?usp=sharing)    | 73.91 | 60.51 | 86.81 | 71.31 | 56.45 | 37.92 | 73.61 | 48.98 |
 | [R101-RMAC](https://drive.google.com/file/d/12um3mZU2kVNto3MPrZ6FmxFca_tL3Sgi/view?usp=sharing) |75.14 | 61.88 | 85.28 | 67.37 | 53.77 | 36.45 | 71.28 | 44.01 |
 | [R101-SOLAR](https://drive.google.com/file/d/1CJNEeE0NDlsl56jnmsZFmPfH-jx32Syh/view?usp=sharing) | 79.65 | 67.61 | 88.63 | 73.21 | 59.99 | 41.14 | 76.15 | 50.98 |
 | [R101-DELG](https://drive.google.com/file/d/10WExWiY5cc4-hrQQpQ3yUvOV06f3wYaB/view?usp=sharing) | 78.55 | 66.02 | 88.58 | 73.65 | 60.89 | 41.75 | 76.05 | 51.46 |
