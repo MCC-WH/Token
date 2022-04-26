@@ -17,7 +17,7 @@ mAP is computed with Medium and Hard evaluation protocols.
 | [R101-SOLAR](https://drive.google.com/file/d/1CJNEeE0NDlsl56jnmsZFmPfH-jx32Syh/view?usp=sharing) | 79.65 | 67.61 | 88.63 | 73.21 | 59.99 | 41.14 | 76.15 | 50.98 |
 | [R101-DELG](https://drive.google.com/file/d/10WExWiY5cc4-hrQQpQ3yUvOV06f3wYaB/view?usp=sharing) | 78.55 | 66.02 | 88.58 | 73.65 | 60.89 | 41.75 | 76.05 | 51.46 |
 | [R50-Token](https://drive.google.com/file/d/111CQpn38d2P82VhbawMrM5wGNMU9AlFq/view?usp=sharing) | 79.79 | 67.36 | 88.08 | 74.33 | 62.68 | 45.70 | 75.49 | 52.68 |
-| [R101-Token](https://drive.google.com/file/d/1g_fvpaSyYn9QmzyVnoY7cDlUL7EZWbZz/view?usp=sharing) | **82.61** | **70.58** | **89.40** | **77.24** | **65.75** | **47.46** | **78.44** | **56.81** |
+| [R101-Token](https://drive.google.com/file/d/1g_fvpaSyYn9QmzyVnoY7cDlUL7EZWbZz/view?usp=sharing) | **82.16** | **70.58** | **89.40** | **77.24** | **65.75** | **47.46** | **78.44** | **56.81** |
 
 # Local feature aggregation framework
 The new framework diagram is shown below. For an image, we extract its local features and aggregate them using our proposed method.
