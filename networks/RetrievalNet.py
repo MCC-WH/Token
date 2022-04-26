@@ -235,3 +235,27 @@ class Token(nn.Module):
         global_logits = self.classifier(x, label)
         global_loss = F.cross_entropy(global_logits, label)
         return global_loss, global_logits
+
+class RMAC(nn.Module):
+    def __init__(self, backbone: ResNet):
+        super(RMAC, self).__init__()
+        self.backbone = backbone
+        self.pooling = rmac()
+        self.whiten = nn.Conv2d(backbone.outputdim_block5, 2048, kernel_size=(1, 1), stride=1, padding=0, bias=True)
+        self.outputdim = 2048
+        self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
+     
+    def forward_test(self, x):
+        x = self.backbone(x)
+        x = self.pooling(x)
+        x = self.whiten(x).squeeze(-1).squeeze(-1)
+        global_feature = F.normalize(x, dim=-1)
+        return global_feature
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.pooling(x).squeeze(-1).squeeze(-1)
+        global_feature = F.normalize(x, p=2.0, dim=1)
+        global_feature = self.whiten(global_feature).squeeze(-1).squeeze(-1)
+        global_feature = F.normalize(global_feature, p=2.0, dim=-1)
+        return global_feature
