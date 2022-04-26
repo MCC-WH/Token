@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.cuda.amp.autocast_mode import autocast
-from .backbone import ResNet, ResNet_SOA4
+from .backbone import ResNet, ResNet_STAGE45, weights_init, constant_init
 
 eps_fea_norm = 1e-5
 eps_l2_norm = 1e-10
@@ -163,7 +163,7 @@ class Decoder(nn.Module):
 class Token_Refine(nn.Module):
     def __init__(self, num_heads, num_object, mid_dim=1024, encoder_layer=1, decoder_layer=2, qkv_bias=True, drop=0.1, attn_drop=0.1, drop_path=0.1):
         super().__init__()
-        self.query = Parameter(torch.randn(1, num_object, mid_dim))
+        self.query = nn.Parameter(torch.randn(1, num_object, mid_dim))
         self.token_norm = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.LayerNorm(mid_dim))
         self.encoder = nn.ModuleList([Encoder(mid_dim, num_heads, qkv_bias, drop, attn_drop, drop_path) for _ in range(encoder_layer)])
         self.decoder = nn.ModuleList([Decoder(mid_dim, num_heads, qkv_bias, drop, attn_drop, drop_path) for _ in range(decoder_layer)])
@@ -214,10 +214,11 @@ class ArcFace(nn.Module):
         return output
 
 
+#----------------------------------------------------------------------------------------------------------------------------------
+# Token
 class Token(nn.Module):
-    def __init__(self, classifier_num):
+    def __init__(self, outputdim=1024, classifier_num=81313):
         super().__init__()
-        outputdim = 1024
         self.outputdim = 1024
         self.backbone = ResNet(name='resnet101', train_backbone=True, dilation_block5=False)
         self.tr = Token_Refine(num_heads=8, num_object=4, mid_dim=outputdim, encoder_layer=1, decoder_layer=2)
@@ -229,6 +230,7 @@ class Token(nn.Module):
         global_feature = F.normalize(x, dim=-1)
         return global_feature
 
+    @torch.no_grad()
     def forward(self, x, label):
         x = self.backbone(x)
         x = self.tr(x)
@@ -236,15 +238,76 @@ class Token(nn.Module):
         global_loss = F.cross_entropy(global_logits, label)
         return global_loss, global_logits
 
+
+#----------------------------------------------------------------------------------------------------------------------------------
+# RMAC
+
+
+class rmac(nn.Module):
+    def __init__(self, L=3, eps=1e-6):
+        super(rmac, self).__init__()
+
+    def forward(self, x):
+        ovr = 0.4  # desired overlap of neighboring regions
+        steps = torch.Tensor([2, 3, 4, 5, 6, 7])  # possible regions for the long dimension
+
+        W = x.size(3)
+        H = x.size(2)
+
+        w = min(W, H)
+
+        b = (max(H, W) - w) / (steps - 1)
+        (_, idx) = torch.min(torch.abs(((w**2 - w * b) / w**2) - ovr), 0)  # steps(idx) regions for long dimension
+
+        # region overplus per dimension
+        Wd = 0
+        Hd = 0
+        if H < W:
+            Wd = idx.item() + 1
+        elif H > W:
+            Hd = idx.item() + 1
+
+        v = F.max_pool2d(x, (x.size(-2), x.size(-1)))
+        v = v / (torch.norm(v, p=2, dim=1, keepdim=True) + self.eps).expand_as(v)
+
+        for l in range(1, self.L + 1):
+            wl = math.floor(2 * w / (l + 1))
+            wl2 = math.floor(wl / 2 - 1)
+
+            if l + Wd == 1:
+                b = 0
+            else:
+                b = (W - wl) / (l + Wd - 1)
+            cenW = torch.floor(wl2 + torch.Tensor(range(l - 1 + Wd + 1)) * b) - wl2  # center coordinates
+            if l + Hd == 1:
+                b = 0
+            else:
+                b = (H - wl) / (l + Hd - 1)
+            cenH = torch.floor(wl2 + torch.Tensor(range(l - 1 + Hd + 1)) * b) - wl2  # center coordinates
+
+            for i_ in cenH.tolist():
+                for j_ in cenW.tolist():
+                    if wl == 0:
+                        continue
+                    R = x[:, :, (int(i_) + torch.Tensor(range(wl)).long()).tolist(), :]
+                    R = R[:, :, :, (int(j_) + torch.Tensor(range(wl)).long()).tolist()]
+                    vt = F.max_pool2d(R, (R.size(-2), R.size(-1)))
+                    vt = vt / (torch.norm(vt, p=2, dim=1, keepdim=True) + self.eps).expand_as(vt)
+                    v += vt
+
+        return v
+
+
 class RMAC(nn.Module):
     def __init__(self, outputdim, classifier_num):
         super(RMAC, self).__init__()
         self.backbone = ResNet(name='resnet101', train_backbone=True, dilation_block5=False)
         self.pooling = rmac()
-        self.whiten = nn.Conv2d(backbone.outputdim_block5, 2048, kernel_size=(1, 1), stride=1, padding=0, bias=True)
+        self.whiten = nn.Conv2d(self.backbone.outputdim_block5, 2048, kernel_size=(1, 1), stride=1, padding=0, bias=True)
         self.outputdim = outputdim
         self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
-     
+
+    @torch.no_grad()
     def forward_test(self, x):
         x = self.backbone(x)
         x = self.pooling(x)
@@ -252,7 +315,7 @@ class RMAC(nn.Module):
         global_feature = F.normalize(x, dim=-1)
         return global_feature
 
-    def forward(self, x):
+    def forward(self, x, label):
         x = self.backbone(x)
         x = self.pooling(x).squeeze(-1).squeeze(-1)
         global_feature = F.normalize(x, p=2.0, dim=1)
@@ -260,10 +323,88 @@ class RMAC(nn.Module):
         global_logits = self.classifier(global_feature, label)
         global_loss = F.cross_entropy(global_logits, label)
         return global_loss, global_logits
-   
+
+
+#----------------------------------------------------------------------------------------------------------------------------------
+# DELG
+
+
+class Spatial_Attention(nn.Module):
+    def __init__(self, input_dim):
+        super(Spatial_Attention, self).__init__()
+        self.att_conv1 = nn.Conv2d(input_dim, 1, kernel_size=(1, 1), padding=0, stride=1, bias=False)
+        self.att_act2 = nn.Softplus(beta=1, threshold=20)
+        self._reset_parameters()
+
+    def _reset_parameters(self):
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
+    def forward(self, x):
+        att_score = self.att_act2(self.att_conv1(x))
+        return att_score
+
+
+class DELG(nn.Module):
+    def __init__(self, outputdim, reduction_dim=128, classifier_num=1024):
+        super(DELG, self).__init__()
+
+        self.backbone = ResNet_STAGE45(name='resnet101', train_backbone=True, dilation_block5=False)
+        self.pooling = gem(p=3.0)
+        self.whiten = nn.Conv2d(self.backbone.outputdim_block5, outputdim, kernel_size=(1, 1), stride=1, padding=0, bias=True)
+        self.outputdim = outputdim
+        self.classifier_block5 = ArcFace(in_features=outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
+        self.classifier_block4 = ArcFace(in_features=reduction_dim, out_features=classifier_num, s=math.sqrt(reduction_dim), m=0.1)
+        self.attention = Spatial_Attention(input_dim=1024)
+        self.reduction = nn.Conv2d(self.backbone.outputdim_block4, reduction_dim, kernel_size=1, padding=0, stride=1, bias=True)
+
+    def _init_input_proj(self, weight, bias):
+        self.reduction.weight.data = weight
+        self.reduction.bias.data = bias
+
+    @torch.no_grad()
+    def forward_test(self, x):
+        x4, x5 = self.backbone(x)
+        global_feature = F.normalize(self.pooling(x5), p=2.0, dim=1)
+        global_feature = self.whiten(global_feature).squeeze(-1).squeeze(-1)
+        global_feature = F.normalize(global_feature, p=2.0, dim=-1)
+        return global_feature
+
+    def forward(self, x, label):
+        x4, x5 = self.backbone(x)
+        global_feature = F.normalize(self.pooling(x5), p=2.0, dim=1)
+        global_feature = self.whiten(global_feature).squeeze(-1).squeeze(-1)
+        global_logits = self.classifier_block5(global_feature, label)
+        global_loss = F.cross_entropy(global_logits, label)
+
+        x4 = x4.detach()
+        att_score = self.attention(x4)
+        local_features = F.normalize(self.reduction(x4), dim=-1)
+        att_local_features = local_features * att_score
+        pooled_local_feature = F.avg_pool2d(att_local_features, (att_local_features.size(-2), att_local_features.size(-1))).squeeze(-1).squeeze(-1)
+        local_logits = self.classifier_block4(pooled_local_feature, label)
+        local_loss = F.cross_entropy(local_logits, label)
+        return global_loss, local_loss, global_logits, local_logits
+
+
+#----------------------------------------------------------------------------------------------------------------------------------
+# SOLAR
+
+
+class gem(nn.Module):
+    def __init__(self, p=3.0, eps=1e-6):
+        super(gem, self).__init__()
+        self.p = p
+        self.eps = eps
+
+    def forward(self, x):
+        return F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1))).pow(1. / self.p)
+
+
 class SOABlock_GeM(nn.Module):
     def __init__(self, in_ch, k):
-        super(SOABlock, self).__init__()
+        super(SOABlock_GeM, self).__init__()
 
         self.in_ch = in_ch
         self.out_ch = in_ch
@@ -276,7 +417,7 @@ class SOABlock_GeM(nn.Module):
         self.g = nn.Sequential(nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1)), nn.BatchNorm2d(self.mid_ch), nn.ReLU())
         self.h = nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1))
         self.v = nn.Conv2d(self.mid_ch, self.out_ch, (1, 1), (1, 1))
-        self.pooling = GeM(p=3.0)
+        self.pooling = gem(p=3.0)
 
         for conv in [self.f, self.g, self.h]:
             conv.apply(weights_init)
@@ -297,25 +438,27 @@ class SOABlock_GeM(nn.Module):
         z = z + x
         z = self.pooling(z)
         return z
-    
+
+
 class SOLAR(nn.Module):
     def __init__(self, outputdim, classifier_num):
         super(SOLAR, self).__init__()
-        self.backbone = ResNet_SOA4(name='resnet101', train_backbone=True, dilation_block5=False)
+        self.backbone = ResNet(name='resnet101', train_backbone=True, dilation_block5=False)
         self.pooling = SOABlock_GeM(in_ch=2048, k=2)
-        self.whiten = nn.Conv2d(backbone.outputdim_block5, 2048, kernel_size=(1, 1), stride=1, padding=0, bias=True)
+        self.whiten = nn.Conv2d(self.backbone.outputdim_block5, 2048, kernel_size=(1, 1), stride=1, padding=0, bias=True)
         self.outputdim = outputdim
         self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
-     
+
+    @torch.no_grad()
     def forward_test(self, x):
         x = self.backbone(x)
         x = self.pooling(x)
-        x= F.normalize(x, p=2.0, dim=1)
+        x = F.normalize(x, p=2.0, dim=1)
         x = self.whiten(x).squeeze(-1).squeeze(-1)
         global_feature = F.normalize(x, dim=-1)
         return global_feature
 
-    def forward(self, x):
+    def forward(self, x, label):
         x = self.backbone(x)
         x = self.pooling(x)
         global_feature = F.normalize(x, p=2.0, dim=1)
@@ -323,7 +466,12 @@ class SOLAR(nn.Module):
         global_logits = self.classifier(global_feature, label)
         global_loss = F.cross_entropy(global_logits, label)
         return global_loss, global_logits
-    
+
+
+#----------------------------------------------------------------------------------------------------------------------------------
+# NetVLAD
+
+
 class VLADLayer(nn.Module):
     def __init__(self, num_clusters=64, dim=128):
         super().__init__()
@@ -348,12 +496,12 @@ class VLADLayer(nn.Module):
         vlad = torch.sum(residual * soft_assign.unsqueeze(-1), dim=1)  # (N, number_cluster, C)
         norm_vlad = F.normalize(vlad, dim=-1)  # intra-normalization
         cos_cluster = torch.bmm(norm_vlad, norm_vlad.permute(0, 2, 1))
-        mask = torch.scatter(torch.ones_like(cos_cluster), -1,
-                             torch.arange(cos_cluster.size(1), device=cos_cluster.device).view(-1, 1).repeat(N, 1, 1), 0.0)
+        mask = torch.scatter(torch.ones_like(cos_cluster), -1, torch.arange(cos_cluster.size(1), device=cos_cluster.device).view(-1, 1).repeat(N, 1, 1), 0.0)
         Regularization = torch.mean(cos_cluster * mask)
         VLAD = self.proj(vlad.reshape(N, -1))
         return VLAD, Regularization
-    
+
+
 class NetVLAD(nn.Module):
     def __init__(self, outputdim, classifier_num):
         super().__init__()
@@ -362,13 +510,14 @@ class NetVLAD(nn.Module):
         self.vlad = VLADLayer(num_clusters=4, dim=self.outputdim)
         self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
 
+    @torch.no_grad()
     def forward_test(self, x):
         x = self.backbone(x)
         x, _ = self.vlad(x)
         global_feature = F.normalize(x, dim=-1)
         return global_feature
-    
-    def forward(self, x):
+
+    def forward(self, x, label):
         x = self.backbone(x)
         x, _ = self.vlad(x)
         global_feature = F.normalize(x, dim=-1)
