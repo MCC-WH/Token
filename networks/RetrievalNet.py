@@ -237,12 +237,12 @@ class Token(nn.Module):
         return global_loss, global_logits
 
 class RMAC(nn.Module):
-    def __init__(self, backbone: ResNet):
+    def __init__(self, outputdim, classifier_num):
         super(RMAC, self).__init__()
-        self.backbone = backbone
+        self.backbone = ResNet(name='resnet101', train_backbone=True, dilation_block5=False)
         self.pooling = rmac()
         self.whiten = nn.Conv2d(backbone.outputdim_block5, 2048, kernel_size=(1, 1), stride=1, padding=0, bias=True)
-        self.outputdim = 2048
+        self.outputdim = outputdim
         self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
      
     def forward_test(self, x):
@@ -257,5 +257,58 @@ class RMAC(nn.Module):
         x = self.pooling(x).squeeze(-1).squeeze(-1)
         global_feature = F.normalize(x, p=2.0, dim=1)
         global_feature = self.whiten(global_feature).squeeze(-1).squeeze(-1)
-        global_feature = F.normalize(global_feature, p=2.0, dim=-1)
+        global_logits = self.classifier(global_feature, label)
+        global_loss = F.cross_entropy(global_logits, label)
+        return global_loss, global_logits
+    
+class VLADLayer(nn.Module):
+    def __init__(self, num_clusters=64, dim=128):
+        super().__init__()
+        self.num_clusters = num_clusters
+        self.dim = dim
+        self.encoder = Encoder(dim, 8, True, drop=0.1, attn_drop=0.1, drop_path=0.1)
+        self.centroids = nn.Parameter(torch.randn(1, dim, num_clusters))
+        self.conv = nn.Sequential(nn.Conv2d(in_channels=2048, out_channels=dim, kernel_size=(1, 1), stride=1, padding=0), nn.BatchNorm2d(dim))
+        self.mid_dim = dim
+        self.proj = nn.Sequential(nn.Linear(in_features=dim * num_clusters, out_features=dim), nn.BatchNorm1d(dim))
+
+    def forward(self, x: Tensor):
+        N, _, H, W = x.size()
+        x = self.conv(x).reshape(N, self.dim, H * W).permute(0, 2, 1)
+        x = self.encoder(x)
+
+        # soft-assignment
+        centroids = self.centroids.repeat(N, 1, 1)
+        soft_assign = F.softmax(torch.bmm(x, centroids), dim=-1)  # (N, H * W, number_cluster)
+
+        residual = x.unsqueeze(2) - centroids.permute(0, 2, 1).unsqueeze(1)  # (N, H * W, number_cluster, C)
+        vlad = torch.sum(residual * soft_assign.unsqueeze(-1), dim=1)  # (N, number_cluster, C)
+        norm_vlad = F.normalize(vlad, dim=-1)  # intra-normalization
+        cos_cluster = torch.bmm(norm_vlad, norm_vlad.permute(0, 2, 1))
+        mask = torch.scatter(torch.ones_like(cos_cluster), -1,
+                             torch.arange(cos_cluster.size(1), device=cos_cluster.device).view(-1, 1).repeat(N, 1, 1), 0.0)
+        Regularization = torch.mean(cos_cluster * mask)
+        VLAD = self.proj(vlad.reshape(N, -1))
+        return VLAD, Regularization
+    
+class NetVLAD(nn.Module):
+    def __init__(self, outputdim, classifier_num):
+        super().__init__()
+        self.outputdim = outputdim
+        self.backbone = ResNet(name='resnet101', train_backbone=False, type='imagenet', dilation_block5=False)
+        self.vlad = VLADLayer(num_clusters=4, dim=self.outputdim)
+        self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
+
+    def forward_test(self, x):
+        x = self.backbone(x)
+        x, _ = self.vlad(x)
+        global_feature = F.normalize(x, dim=-1)
         return global_feature
+    
+    def forward(self, x):
+        x = self.backbone(x)
+        x, _ = self.vlad(x)
+        global_feature = F.normalize(x, dim=-1)
+        global_logits = self.classifier(global_feature, label)
+        global_loss = F.cross_entropy(global_logits, label)
+        return global_loss, global_logits
