@@ -5,7 +5,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from Dataset import ImageFromList, RoxfordAndRparis
-from networks import RetrievalNet
+from networks import Token, SOLAR
 from utils import compute_map_and_print, extract_vectors
 import os
 
