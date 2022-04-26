@@ -260,6 +260,71 @@ class RMAC(nn.Module):
         global_logits = self.classifier(global_feature, label)
         global_loss = F.cross_entropy(global_logits, label)
         return global_loss, global_logits
+   
+class SOABlock(nn.Module):
+    def __init__(self, in_ch, k):
+        super(SOABlock, self).__init__()
+
+        self.in_ch = in_ch
+        self.out_ch = in_ch
+        self.mid_ch = in_ch // k
+
+        print('Num channels:  in    out    mid')
+        print('               {:>4d}  {:>4d}  {:>4d}'.format(self.in_ch, self.out_ch, self.mid_ch))
+
+        self.f = nn.Sequential(nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1)), nn.BatchNorm2d(self.mid_ch), nn.ReLU())
+        self.g = nn.Sequential(nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1)), nn.BatchNorm2d(self.mid_ch), nn.ReLU())
+        self.h = nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1))
+        self.v = nn.Conv2d(self.mid_ch, self.out_ch, (1, 1), (1, 1))
+        self.pooling = GeM(p=3.0)
+
+        for conv in [self.f, self.g, self.h]:
+            conv.apply(weights_init)
+        self.v.apply(constant_init)
+
+    def forward(self, x: Tensor):
+        B, C, H, W = x.size()
+
+        f_x = self.f(x).view(B, self.mid_ch, H * W)  # B * mid_ch * N, where N = H*W
+        g_x = self.g(x).view(B, self.mid_ch, H * W)  # B * mid_ch * N, where N = H*W
+        h_x = self.h(x).view(B, self.mid_ch, H * W)  # B * mid_ch * N, where N = H*W
+
+        z = torch.bmm(f_x.permute(0, 2, 1), g_x)  # B * N * N, where N = H*W
+        attn = F.softmax((self.mid_ch**-.50) * z, dim=-1)
+        z = torch.bmm(attn, h_x.permute(0, 2, 1))  # B * N * mid_ch, where N = H*W
+        z = z.permute(0, 2, 1).view(B, self.mid_ch, H, W)  # B * mid_ch * H * W
+        z = self.v(z)
+        z = z + x
+        z = self.pooling(z)
+        return z
+    
+class SOLAR(nn.Module):
+    def __init__(self, outputdim, classifier_num):
+        super(RMAC, self).__init__()
+        self.backbone = ResNet_SOA4(name='resnet101', train_backbone=True, dilation_block5=False)
+        self.pooling = SOABlock(in_ch=2048, k=2)
+        self.whiten = nn.Conv2d(backbone.outputdim_block5, 2048, kernel_size=(1, 1), stride=1, padding=0, bias=True)
+        self.outputdim = outputdim
+        self.classifier = ArcFace(in_features=self.outputdim, out_features=classifier_num, s=math.sqrt(self.outputdim), m=0.2)
+     
+    def forward_test(self, x):
+        x = self.backbone(x)
+        x = self.pooling(x)
+        x = gem(x)
+        x= F.normalize(x, p=2.0, dim=1)
+        x = self.whiten(x).squeeze(-1).squeeze(-1)
+        global_feature = F.normalize(x, dim=-1)
+        return global_feature
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.pooling(x)
+        x = gem(x)
+        global_feature = F.normalize(x, p=2.0, dim=1)
+        global_feature = self.whiten(global_feature).squeeze(-1).squeeze(-1)
+        global_logits = self.classifier(global_feature, label)
+        global_loss = F.cross_entropy(global_logits, label)
+        return global_loss, global_logits
     
 class VLADLayer(nn.Module):
     def __init__(self, num_clusters=64, dim=128):
