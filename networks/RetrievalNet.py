@@ -214,7 +214,7 @@ class ArcFace(nn.Module):
         return output
 
 
-class RetrievalNet(nn.Module):
+class Token(nn.Module):
     def __init__(self, classifier_num):
         super().__init__()
         outputdim = 1024
