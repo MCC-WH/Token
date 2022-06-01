@@ -9,7 +9,7 @@ from torch import cuda, optim
 from torch.utils.data import BatchSampler, DataLoader, DistributedSampler
 from config import get_args
 from Dataset import GLDv2
-from networks import RetrievalNet
+from networks import Token
 from utils import MetricLogger, create_optimizer, init_distributed_mode, is_main_process, get_rank, optimizer_to
 
 
@@ -97,7 +97,7 @@ def main(args):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, sampler=None, drop_last=False)
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, sampler=None, drop_last=False)
 
-    model = RetrievalNet(args.classifier_num).to(device)
+    model = Token(outputdim=1024, args.classifier_num).to(device)
     model_without_ddp = model
 
     if args.distributed:
