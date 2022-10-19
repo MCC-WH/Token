@@ -4,6 +4,10 @@
 
 🆕✅🎉 _updated: 15th December 2021: We extend the proposed aggregation method to a variety of existing local features._
 
+
+# NOTE
+In the [arixv version](https://arxiv.org/abs/2112.06159) of our paper, the performance does differ from the publicly available model. Since I neglect to do **cropping operations** for the query images. The performance of the public model should now be the real performance. We have updated the errors in the official [camera ready version](https://ojs.aaai.org/index.php/AAAI/article/view/20173) version submitted to AAAI.
+
 # mAP performance of the proposed model
 We provide results of **Token**.
 mAP is computed with Medium and Hard evaluation protocols.
