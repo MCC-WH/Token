@@ -6,7 +6,7 @@
 
 
 # NOTE
-In the [arixv version](https://arxiv.org/abs/2112.06159) of our paper, the performance does differ from the publicly available model. Since I neglect to do **cropping operations** for the query images. The performance of the public model should now be the real performance. We have updated the errors in the official [camera ready version](https://ojs.aaai.org/index.php/AAAI/article/view/20173) version submitted to AAAI.
+In the [arixv version](https://arxiv.org/abs/2112.06159) of our paper, the performance does differ from the publicly available model. Since We neglect to do **cropping operations** for the query images. We have updated the performance in the official [camera ready](https://ojs.aaai.org/index.php/AAAI/article/view/20173) version submitted to AAAI.
 
 # mAP performance of the proposed model
 We provide results of **Token**.
