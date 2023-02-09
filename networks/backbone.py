@@ -40,7 +40,7 @@ def extract_features_from_e2e(model):
 class ResNet(nn.Module):
     def __init__(self, name: str, train_backbone: bool, dilation_block5: bool):
         super(ResNet, self).__init__()
-        net_in = getattr(torchvision.models, name)(pretrained=False)
+        net_in = getattr(torchvision.models, name)(pretrained=True)
         if name.startswith('resnet'):
             features = list(net_in.children())[:-2]
         else:
@@ -71,7 +71,7 @@ class ResNet(nn.Module):
 class ResNet_STAGE45(nn.Module):
     def __init__(self, name: str, train_backbone: bool, dilation_block5: bool):
         super(ResNet_STAGE45, self).__init__()
-        net_in = getattr(torchvision.models, name)(pretrained=False)
+        net_in = getattr(torchvision.models, name)(pretrained=True)
         if name.startswith('resnet'):
             features = list(net_in.children())[:-2]
         else:
