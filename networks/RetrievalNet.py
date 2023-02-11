@@ -230,7 +230,6 @@ class Token(nn.Module):
         global_feature = F.normalize(x, dim=-1)
         return global_feature
 
-    @torch.no_grad()
     def forward(self, x, label):
         x = self.backbone(x)
         x = self.tr(x)
